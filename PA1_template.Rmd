@@ -7,19 +7,119 @@ output:
 
 
 ## Loading and preprocessing the data
+```{r message=FALSE}
+library(dplyr)
+```
+
+```{r}
+df = read.csv("activity.csv", colClasses = c("numeric", "Date", "numeric"))
+
+```
 
 
 
 ## What is mean total number of steps taken per day?
 
+```{r}
+gdf = group_by(df, date)
+summ = summarise(gdf, mean.steps = sum(steps, na.rm = TRUE))
+print(summ)
+
+library(ggplot2)
+qplot(mean.steps, data = summ)
+```
+
+
+Mean of total number of steps taken per day
+```{r}
+mean(summ$mean.steps)
+```
+
+
+Median of total number of  steps taken per day
+```{r}
+median(summ$mean.steps)
+```
+
 
 
 ## What is the average daily activity pattern?
+```{r}
+gdfTimeIntervals = group_by(df, interval)
+summTimeIntervals = summarize(gdfTimeIntervals, avgSteps = mean(steps, na.rm = TRUE))
+qplot(interval, avgSteps, data = summTimeIntervals, geom = "line")
+```
+
+Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+
+```{r}
+summTimeIntervals[which.max(summTimeIntervals$avgSteps),]
+```
 
 
 
 ## Imputing missing values
 
+Calculate and report the total number of missing values in the dataset (i.e. the total number of rows with NAs)
+
+```{r}
+nrow(df) - sum(complete.cases(df))
+```
+
+Devise a strategy for filling in all of the missing values in the dataset. The strategy does not need to be sophisticated. For example, you could use the mean/median for that day, or the mean for that 5-minute interval, etc.
+
+```{r}
+library(Hmisc)
+```
+
+
+Create a new dataset that is equal to the original dataset but with the missing data filled in.
+
+```{r}
+idf = df
+idf$steps = impute(df$steps, fun=mean)
+```
+Make a histogram of the total number of steps taken each day and Calculate and report the mean and median total number of steps taken per day. Do these values differ from the estimates from the first part of the assignment? What is the impact of imputing missing data on the estimates of the total daily number of steps?
+
+```{r}
+gdf = group_by(idf, date)
+summ = dplyr::summarise(gdf, totalPerDay = sum(steps))
+qplot(totalPerDay, data = summ)
+```
+
+Mean of total number of steps taken per day
+```{r}
+mean(summ$totalPerDay)
+```
+
+
+Median of total number of  steps taken per day
+```{r}
+median(summ$totalPerDay)
+```
+
+Yes there is a difference between these median/mean and those from the first part
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+Create a new factor variable in the dataset with two levels - "weekday" and "weekend" indicating whether a given date is a weekday or weekend day.
+
+```{r}
+idf$weekdayType = ifelse(as.POSIXlt(idf$date)$wday %in% c(0,6), 'weekend', 'weekday')
+```
+
+Make a panel plot containing a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis). See the README file in the GitHub repository to see an example of what this plot should look like using simulated data.
+
+```{r}
+gdf = group_by(idf, interval, weekdayType)
+summ = dplyr::summarise(gdf, mean.steps = mean(steps))
+ggplot(summ, aes(interval, mean.steps)) + 
+    geom_line() + 
+    facet_grid(weekdayType ~ .) +
+    xlab("5-minute interval") + 
+    ylab("avarage number of steps")
+
+
+```
+
